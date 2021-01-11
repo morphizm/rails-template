@@ -12,7 +12,7 @@ RUN apk update \
 WORKDIR $RAILS_ROOT
 
 RUN gem update --system
-RUN gem install bundler:2.1.4 && gem install rubygems-bundler && gem regenerate_binstubs
+RUN gem install bundler:2.2.4 && gem install rubygems-bundler && gem regenerate_binstubs
 
 COPY Gemfile* ./
 

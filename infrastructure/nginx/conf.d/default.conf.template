@@ -1,0 +1,60 @@
+upstream backend_upstream {
+  server web:3000;
+}
+
+server {
+  listen 80;
+  server_name _ localhost;
+
+  root /app/build/;
+
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+  location @backend {
+    proxy_pass http://backend_upstream;
+  }
+
+  location / {
+    try_files $uri @backend;
+  }
+
+  location /assets {
+    alias /app/public/assets;
+    gzip_static on;
+    gzip on;
+    expires max;
+    add_header Cache-Control public;
+  }
+
+  location /packs {
+    alias /app/public/packs;
+    gzip_static on;
+    gzip on;
+    expires max;
+    add_header Cache-Control public;
+  }
+
+  location /public {
+    alias /app/public;
+    gzip_static on;
+    gzip on;
+    expires max;
+    add_header Cache-Control public;
+  }
+
+  location /doc {
+    root /app/public;
+    auth_basic "Restricted";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+  }
+
+  location ~ ^/(robots\.txt)$ {
+    root /app/public/;
+  }
+
+  location ~ ^/(favicon.+|apple\-touch\-icon\.png|manifest\.json)$ {
+    root /app/public/;
+  }
+}

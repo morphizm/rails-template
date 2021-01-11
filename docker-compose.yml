@@ -1,0 +1,79 @@
+version: '3.7'
+
+x-shared-volumes: &shared-volumes
+  - .:/app:cached
+  - ./public/packs:/app/public/packs:delegated
+  - ~/.ssh:/root/.ssh
+  - ~/.bash_history:/root/.bash_history
+  - bundle_cache:/bundle_cache
+
+x-shared-environment: &shared-environment
+  BUNDLE_PATH: /bundle_cache
+  GEM_HOME: /bundle_cache
+  GEM_PATH: /bundle_cache
+  DB_HOST: db
+  DB_USER: postgres
+  HOST: 'localhost'
+  PORT: '3000'
+  ROLLBAR_ACCESS_TOKEN: ''
+  ROLLBAR_ENV: development
+  RAILS_SECRET_KEY_BASE: f646b338311c34d2e21900236986e93a26bbe02ae7afcc3d2bd9ac5f43ef9be9ae262a465ce603e3e22f5fbf712948b619c4637ed0f98ca401b7144e32aff4ea
+  AUTH_ACCESS_TOKENS_SECRET: top_secret
+  AUTH_REFRESH_TOKENS_SECRET: top_secret
+
+x-web-environment: &web-environment
+  <<: *shared-environment
+
+services:
+  web:
+    build:
+      context: .
+    working_dir: /app
+    image: covid
+    command: bash -c 'rm -f tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0'
+    ports:
+      - 3000:3000
+    volumes: *shared-volumes
+    environment:
+     <<: *web-environment
+     WEBPACKER_DEV_SERVER_HOST: webpack
+    depends_on:
+      - db
+      - webpack
+    stdin_open: true
+    tty: true
+
+  webpack:
+    working_dir: /app
+    image: covid
+    command: bash -c 'rm -rf /app/public/packs; ./bin/webpack-dev-server'
+    volumes: *shared-volumes
+    environment:
+      << : *web-environment
+      WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+    ports:
+      - 7001:7001
+      - 7002:7002
+      - 3035:3035
+
+  db:
+    image: postgres:12.5-alpine
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+  nginx:
+    build: ./infrastructure/nginx
+    volumes:
+      - ./infrastructure/nginx/include:/etc/nginx/include:cached
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:cached
+      - ./infrastructure/nginx/.htpasswd:/etc/nginx/.htpasswd:cached
+      - .:/app:cached
+    links:
+      - web
+    environment:
+      - NGINX_ENV=development
+    ports:
+      - 3080:80
+
+volumes:
+  bundle_cache:
