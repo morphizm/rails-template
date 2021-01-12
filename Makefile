@@ -27,9 +27,8 @@ lint-js:
 lint: lint-js lint-rubocop
 
 compose-build:
-	docker-compose build
-	make compose-bash
-	make setup
+	docker-compose build \
+	&& docker-compose run --rm web bash -c "bundle install && make db-reset"
 
 compose-start:
 	docker-compose up
@@ -39,5 +38,8 @@ compose-test:
 
 compose-bash:
 	docker-compose run --rm web bash
+
+compose-restart-webpack:
+	docker-compose restart webpack
 
 .PHONY: test
